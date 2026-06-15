@@ -1,0 +1,41 @@
+# ─── Python ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# ─── Virtual environments ────────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ─── Secrets / env (keep .env.example tracked) ───────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Generated data & indexes (don't commit large/generated artifacts)
+data/index/
+data/uploads/
+*.faiss
+*.pkl
+
+# ─── Caches ──────────────────────────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.hf_cache/
+
+# ─── Editor / OS ─────────────────────────────────────────────────────
+.idea/
+.DS_Store
+Thumbs.db
+
+# ─── Logs ────────────────────────────────────────────────────────────
+*.log
+
+# ─── Streamlit ───────────────────────────────────────────────────────
+.streamlit/secrets.toml
