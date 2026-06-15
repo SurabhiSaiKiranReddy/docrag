@@ -35,3 +35,22 @@ class ScoredChunk(BaseModel):
 
     chunk: Chunk
     score: float = Field(..., description="Similarity score; higher is more relevant.")
+
+
+class Citation(BaseModel):
+    """A source reference attached to a generated answer."""
+
+    source: str
+    chunk_id: int
+    page: int | None = None
+    score: float
+
+    @classmethod
+    def from_scored(cls, scored: ScoredChunk) -> Citation:
+        """Build a citation from a retrieved :class:`ScoredChunk`."""
+        return cls(
+            source=scored.chunk.metadata.source,
+            chunk_id=scored.chunk.metadata.chunk_id,
+            page=scored.chunk.metadata.page,
+            score=scored.score,
+        )
