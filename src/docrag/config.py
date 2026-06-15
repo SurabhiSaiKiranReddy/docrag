@@ -7,7 +7,7 @@ no code changes required.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 
@@ -15,21 +15,21 @@ from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class EmbeddingsProvider(str, Enum):
+class EmbeddingsProvider(StrEnum):
     """Supported embedding backends."""
 
     LOCAL = "local"
     OPENAI = "openai"
 
 
-class LLMProvider(str, Enum):
+class LLMProvider(StrEnum):
     """Supported LLM backends."""
 
     OLLAMA = "ollama"
     OPENAI = "openai"
 
 
-class VectorStoreProvider(str, Enum):
+class VectorStoreProvider(StrEnum):
     """Supported vector store backends."""
 
     FAISS = "faiss"
