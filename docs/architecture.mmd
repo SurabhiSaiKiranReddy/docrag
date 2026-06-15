@@ -1,0 +1,23 @@
+flowchart LR
+    U([User]) -->|Upload docs| API[FastAPI Service]
+    U -->|Ask question| API
+
+    subgraph Ingestion
+        ING[Loaders + Token-aware Chunker]
+    end
+
+    subgraph Retrieval & Generation
+        RET[Hybrid Retriever<br/>BM25 + Vector RRF + Rerank]
+        RAG[RAG Orchestrator<br/>LangChain grounded prompt]
+    end
+
+    API -->|parse + chunk| ING
+    ING -->|embed| EMB[Embeddings Provider<br/>sentence-transformers / OpenAI]
+    EMB --> VDB[(Vector Store<br/>FAISS)]
+    API -->|retrieve top-k| RET
+    RET --> VDB
+    RET -->|context chunks| RAG
+    RAG -->|grounded prompt| LLM[LLM Provider<br/>Ollama / OpenAI]
+    LLM -->|streamed answer + citations| API
+    API --> U
+    API -. metrics .-> OBS[[Prometheus + Grafana]]

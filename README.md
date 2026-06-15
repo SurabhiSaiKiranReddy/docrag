@@ -15,6 +15,8 @@ DocRAG is **provider-agnostic** (`Embeddings`, `VectorStore`, and `LLM` are
 abstract interfaces) and **runs for free on a CPU** — no GPU and no API keys
 required for the default local stack.
 
+![DocRAG chat UI with citation-grounded answer](docs/demo.png)
+
 ---
 
 ## Highlights
@@ -91,6 +93,11 @@ OPENAI_API_KEY=sk-...
 
 ## Architecture
 
+![DocRAG architecture diagram](docs/architecture.png)
+
+<details>
+<summary>Mermaid source</summary>
+
 ```mermaid
 flowchart LR
     U[User] -->|Upload docs| API[FastAPI Service]
@@ -98,28 +105,39 @@ flowchart LR
     API -->|parse + chunk| ING[Ingestion Pipeline]
     ING -->|embed| EMB[Embeddings Provider]
     EMB --> VDB[(Vector Store<br/>FAISS)]
-    API -->|retrieve top-k| VDB
-    VDB -->|context chunks| RAG[RAG Orchestrator<br/>LangChain]
+    API -->|retrieve top-k| RET[Hybrid Retriever<br/>BM25 + Vector RRF + Rerank]
+    RET --> VDB
+    RET -->|context chunks| RAG[RAG Orchestrator<br/>LangChain]
     RAG -->|grounded prompt| LLM[LLM Provider<br/>OpenAI / Ollama]
     LLM -->|streamed answer + citations| API
     API --> U
+    API -. metrics .-> OBS[Prometheus + Grafana]
 ```
+
+Regenerate the PNG from the source with:
+`curl -s https://kroki.io/mermaid/png --data-binary @docs/architecture.mmd -o docs/architecture.png`
+
+</details>
 
 **Ingestion:** detect type → extract text (per-page for PDF) → normalize →
 token-aware chunk → embed (batched) → upsert into the vector store with
 `source` / `chunk_id` / `page` metadata.
 
-**Query:** embed the question → top-k similarity search → assemble a grounded,
-citation-annotated prompt → stream the LLM answer with inline citations.
+**Query:** embed the question → top-k similarity search → *(optional)* hybrid
+fuse + rerank → assemble a grounded, citation-annotated prompt → stream the LLM
+answer with inline citations.
 
 ---
 
 ## API
 
+![DocRAG OpenAPI docs](docs/api.png)
+
 | Method | Path | Description |
 |---|---|---|
 | `GET`  | `/health` | Liveness, configured providers, indexed chunk count |
 | `POST` | `/ingest` | Multipart upload of a PDF/TXT/MD file to index |
+| `DELETE` | `/index` | Clear the vector store (remove all indexed documents) |
 | `POST` | `/query`  | Ask a question; NDJSON token stream (or JSON when `stream=false`) |
 
 ```bash
@@ -187,6 +205,9 @@ src/docrag/
 └── observability/       # structured logging
 ui/app.py                # Streamlit chat UI
 data/sample/             # synthetic documents for local testing
+data/eval/qa.json        # gold question set for the eval harness
+docs/                    # screenshots + architecture diagram
+monitoring/              # Prometheus + Grafana provisioning
 tests/                   # pytest suite (offline fakes)
 ```
 
