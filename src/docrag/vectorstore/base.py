@@ -38,3 +38,7 @@ class VectorStore(ABC):
     @abstractmethod
     def all_chunks(self) -> list[Chunk]:
         """Return every indexed chunk (used by keyword/hybrid retrieval)."""
+
+    @abstractmethod
+    def clear(self) -> None:
+        """Remove all indexed chunks and delete any persisted artifacts."""

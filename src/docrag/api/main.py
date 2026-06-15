@@ -27,6 +27,7 @@ from docrag.api.schemas import (
     IngestResponse,
     QueryRequest,
     QueryResponse,
+    ResetResponse,
 )
 from docrag.ingestion.loaders import UnsupportedFileTypeError
 from docrag.observability.logging import configure_logging, get_logger
@@ -100,6 +101,14 @@ async def ingest(
         extra={"event": "ingest", "source": result.source, "chunks": result.chunks},
     )
     return IngestResponse(source=result.source, chunks=result.chunks, pages=result.pages)
+
+
+@app.delete("/index", response_model=ResetResponse)
+def reset_index(services: ServicesDep) -> ResetResponse:
+    """Clear the vector store, removing all indexed documents."""
+    services.vectorstore.clear()
+    logger.info("index cleared", extra={"event": "reset"})
+    return ResetResponse(status="cleared", indexed_chunks=services.vectorstore.count())
 
 
 def _ndjson_stream(services: Services, question: str, top_k: int | None) -> Iterator[str]:

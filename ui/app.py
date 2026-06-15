@@ -41,6 +41,13 @@ def ingest_file(name: str, data: bytes, mime: str) -> dict[str, Any]:
     return response.json()
 
 
+def reset_index() -> dict[str, Any]:
+    """Delete all indexed documents from the backend vector store."""
+    response = httpx.delete(f"{API_URL}/index", timeout=30.0)
+    response.raise_for_status()
+    return response.json()
+
+
 def stream_answer(question: str, top_k: int, sink: dict[str, Any]) -> Iterator[str]:
     """Stream answer tokens from the backend, stashing citations/errors in ``sink``."""
     payload = {"question": question, "top_k": top_k, "stream": True}
@@ -112,9 +119,18 @@ with st.sidebar:
 
     st.divider()
     top_k = st.slider("Chunks to retrieve (top-k)", min_value=1, max_value=15, value=5)
-    if st.button("Clear chat", use_container_width=True):
+    col_a, col_b = st.columns(2)
+    if col_a.button("Clear chat", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
+    if col_b.button("Reset index", use_container_width=True):
+        try:
+            result = reset_index()
+            st.session_state.messages = []
+            st.success(f"Index cleared ({result['indexed_chunks']} chunks)")
+            st.rerun()
+        except httpx.HTTPError as exc:
+            st.error(f"Reset failed: {exc}")
 
 
 # ── Main: chat ────────────────────────────────────────────────────────

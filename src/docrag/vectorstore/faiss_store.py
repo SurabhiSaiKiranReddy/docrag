@@ -103,3 +103,10 @@ class FaissVectorStore(VectorStore):
 
     def all_chunks(self) -> list[Chunk]:
         return list(self._chunks)
+
+    def clear(self) -> None:
+        # Reset in place so references held by retrievers/pipeline stay valid.
+        self._index = None
+        self._chunks = []
+        self._index_path().unlink(missing_ok=True)
+        self._meta_path().unlink(missing_ok=True)

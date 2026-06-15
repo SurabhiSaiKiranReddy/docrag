@@ -114,3 +114,23 @@ def test_metrics_endpoint_exposes_custom_metrics(client: TestClient) -> None:
     assert "docrag_queries_total" in body
     assert "docrag_ingest_duration_seconds" in body
     assert "http_request_duration_seconds" in body
+
+
+def test_reset_index_clears_documents(client: TestClient) -> None:
+    content = b"Nimbus retains raw events for 90 days."
+    client.post("/ingest", files={"file": ("nimbus.md", content, "text/markdown")})
+    assert client.get("/health").json()["indexed_chunks"] >= 1
+
+    response = client.delete("/index")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "cleared"
+    assert body["indexed_chunks"] == 0
+
+    # Index is empty afterwards, and the service still works for re-ingestion.
+    assert client.get("/health").json()["indexed_chunks"] == 0
+    reingest = client.post(
+        "/ingest", files={"file": ("nimbus.md", content, "text/markdown")}
+    )
+    assert reingest.status_code == 200
+    assert client.get("/health").json()["indexed_chunks"] >= 1

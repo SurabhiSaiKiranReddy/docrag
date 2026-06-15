@@ -25,6 +25,13 @@ class IngestResponse(BaseModel):
     pages: int
 
 
+class ResetResponse(BaseModel):
+    """Result of clearing the vector store."""
+
+    status: str = "cleared"
+    indexed_chunks: int = 0
+
+
 class QueryRequest(BaseModel):
     """A natural-language question over the indexed documents."""
 
