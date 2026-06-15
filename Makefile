@@ -2,7 +2,7 @@
 PYTHON := .venv/bin/python
 PIP := .venv/bin/pip
 
-.PHONY: help venv install install-all run ui test lint fmt eval clean
+.PHONY: help venv install install-all run ui test lint fmt eval clean docker-build docker-up docker-down
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -40,6 +40,15 @@ fmt: ## Auto-format with black and ruff --fix
 
 eval: ## Run the RAG evaluation harness
 	$(PYTHON) scripts/eval.py
+
+docker-build: ## Build the DocRAG Docker image
+	docker build -t docrag:latest .
+
+docker-up: ## Start the full stack (api + ui + ollama + prometheus + grafana)
+	docker compose up --build -d
+
+docker-down: ## Stop the full stack
+	docker compose down
 
 clean: ## Remove caches and build artifacts
 	rm -rf .pytest_cache .mypy_cache .ruff_cache build dist src/*.egg-info

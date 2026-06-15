@@ -1,0 +1,70 @@
+# DocRAG full stack: API + UI + local LLM (Ollama) + Prometheus + Grafana.
+#
+#   docker compose up --build
+#   # one-time, to enable local generation:
+#   docker compose exec ollama ollama pull llama3.2:3b
+#
+# Prefer OpenAI instead? Set DOCRAG_LLM_PROVIDER=openai and OPENAI_API_KEY on the
+# `api` service and drop the `ollama` dependency.
+
+services:
+  api:
+    build: .
+    command: uvicorn docrag.api.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      DOCRAG_EMBEDDINGS_PROVIDER: local
+      DOCRAG_LLM_PROVIDER: ollama
+      DOCRAG_OLLAMA_BASE_URL: http://ollama:11434
+      DOCRAG_OLLAMA_MODEL: llama3.2:3b
+    volumes:
+      - docrag-index:/app/data/index
+    depends_on:
+      - ollama
+
+  ui:
+    build: .
+    command: streamlit run ui/app.py --server.address 0.0.0.0 --server.port 8501
+    ports:
+      - "8501:8501"
+    environment:
+      DOCRAG_API_URL: http://api:8000
+    depends_on:
+      - api
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  docrag-index:
+  ollama:

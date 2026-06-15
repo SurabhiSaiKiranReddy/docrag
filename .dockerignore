@@ -1,0 +1,19 @@
+# Build context excludes — keep the image small and builds reproducible
+.venv/
+.git/
+.github/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hf_cache/
+tests/
+data/index/
+data/uploads/
+*.log
+.env
+.env.*
+*.egg-info/
+build/
+dist/

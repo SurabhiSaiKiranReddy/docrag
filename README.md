@@ -56,6 +56,16 @@ make ui            # Streamlit UI at http://localhost:8501  (in a second termina
 
 The default config (`local` embeddings + `faiss` + `ollama`) needs **no API keys**.
 
+### Run the full stack with Docker
+
+```bash
+docker compose up --build           # API :8000 · UI :8501 · Prometheus :9090 · Grafana :3000
+docker compose exec ollama ollama pull llama3.2:3b   # one-time, enables local generation
+```
+
+Grafana is provisioned with the DocRAG dashboard (latency p50/p95/p99, query rate,
+tokens/s) out of the box.
+
 ### Choosing an LLM backend
 
 **Option A — Local & free (Ollama).** Install Ollama and pull a small model:
@@ -225,7 +235,7 @@ These build on the same interfaces without breaking the MVP:
 - [x] **Reranking** — cross-encoder reorder of retrieved candidates
 - [x] **Evaluation harness** — retrieval metrics now; RAGAS generation metrics via `--ragas`
 - [x] **Observability** — Prometheus metrics (p50/p95/p99, tokens) + Grafana dashboard
-- [ ] **Docker + CI** — `docker-compose` stack and GitHub Actions (lint/type/test/build)
+- [x] **Docker + CI** — `docker-compose` stack and GitHub Actions (lint/type/test/build)
 - [ ] **More stores/providers** — pgvector, Pinecone, AWS Bedrock
 
 ---
