@@ -1,0 +1,52 @@
+[
+  {
+    "question": "How long are raw events retained?",
+    "answer": "Raw events are retained for 90 days.",
+    "sources": ["nimbus-overview.md", "nimbus-faq.md"]
+  },
+  {
+    "question": "How often does the Collector flush events?",
+    "answer": "Every 5 seconds, or when the batch reaches 500 events.",
+    "sources": ["nimbus-faq.md", "nimbus-overview.md"]
+  },
+  {
+    "question": "What is the enterprise monthly uptime guarantee?",
+    "answer": "99.95% monthly uptime.",
+    "sources": ["nimbus-overview.md"]
+  },
+  {
+    "question": "What is the maximum time range for a single query?",
+    "answer": "At most 13 months.",
+    "sources": ["nimbus-overview.md", "nimbus-faq.md"]
+  },
+  {
+    "question": "How do I rotate an API key?",
+    "answer": "Settings then API Keys then Rotate; the old key works for a 24-hour grace period.",
+    "sources": ["nimbus-faq.md"]
+  },
+  {
+    "question": "Which regions does Nimbus support?",
+    "answer": "us-east-1, us-west-2, eu-west-1, and ap-south-1.",
+    "sources": ["nimbus-overview.md"]
+  },
+  {
+    "question": "What outbound port does the Collector need open?",
+    "answer": "Outbound HTTPS on port 443.",
+    "sources": ["onboarding-guide.md"]
+  },
+  {
+    "question": "How many projects can I create on the Growth tier?",
+    "answer": "Up to 25 projects per account.",
+    "sources": ["onboarding-guide.md"]
+  },
+  {
+    "question": "What fields are required in a valid event?",
+    "answer": "A name and an ISO 8601 timestamp; properties are optional.",
+    "sources": ["onboarding-guide.md"]
+  },
+  {
+    "question": "How are data exports returned?",
+    "answer": "As gzipped JSON, capped at 10 GB per request.",
+    "sources": ["nimbus-faq.md"]
+  }
+]
