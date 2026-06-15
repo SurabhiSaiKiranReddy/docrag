@@ -101,3 +101,16 @@ def test_ingest_rejects_empty_file(client: TestClient) -> None:
         files={"file": ("empty.md", b"", "text/markdown")},
     )
     assert response.status_code == 400
+
+
+def test_metrics_endpoint_exposes_custom_metrics(client: TestClient) -> None:
+    content = b"Nimbus retains raw events for 90 days."
+    client.post("/ingest", files={"file": ("nimbus.md", content, "text/markdown")})
+    client.post("/query", json={"question": "retention?", "stream": False})
+
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    body = response.text
+    assert "docrag_queries_total" in body
+    assert "docrag_ingest_duration_seconds" in body
+    assert "http_request_duration_seconds" in body

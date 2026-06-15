@@ -153,7 +153,9 @@ All settings use the `DOCRAG_` prefix and can live in `.env` (see
    no API keys, so any reviewer can run it on a laptop.
 3. **Grounded & cited** — the prompt forbids outside knowledge and requires
    inline citations; unsupported questions get an honest "I don't know".
-4. **Observable** — structured JSON logs today; latency/cost metrics on the roadmap.
+4. **Observable** — structured JSON logs plus Prometheus metrics (`/metrics`):
+   per-route latency histograms (p50/p95/p99), query/ingest durations, retrieved
+   chunks, and answer-token counters, with a ready-made Grafana dashboard.
 5. **Secure by default** — secrets only via env, `.env` is gitignored, and the
    project is built and tested exclusively on public/synthetic data.
 
@@ -222,7 +224,7 @@ These build on the same interfaces without breaking the MVP:
 - [x] **Hybrid search** — BM25 + vector fused with Reciprocal Rank Fusion
 - [x] **Reranking** — cross-encoder reorder of retrieved candidates
 - [x] **Evaluation harness** — retrieval metrics now; RAGAS generation metrics via `--ragas`
-- [ ] **Observability** — Prometheus metrics (p50/p95/p99, tokens, cost) + Grafana
+- [x] **Observability** — Prometheus metrics (p50/p95/p99, tokens) + Grafana dashboard
 - [ ] **Docker + CI** — `docker-compose` stack and GitHub Actions (lint/type/test/build)
 - [ ] **More stores/providers** — pgvector, Pinecone, AWS Bedrock
 
