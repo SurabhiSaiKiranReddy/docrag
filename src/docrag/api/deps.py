@@ -13,7 +13,7 @@ from functools import lru_cache
 
 from docrag.config import Settings, get_settings
 from docrag.embeddings.base import Embeddings
-from docrag.factory import build_embeddings, build_llm, build_vectorstore
+from docrag.factory import build_embeddings, build_llm, build_retriever, build_vectorstore
 from docrag.ingestion.chunker import TokenChunker
 from docrag.ingestion.service import IngestionService
 from docrag.llm.base import LLM
@@ -46,7 +46,10 @@ def build_services(settings: Settings | None = None) -> Services:
         chunk_overlap=settings.chunk_overlap,
     )
     ingestion = IngestionService(embeddings, vectorstore, chunker)
-    pipeline = RagPipeline(embeddings, vectorstore, llm, top_k=settings.top_k)
+    retriever = build_retriever(embeddings, vectorstore, settings)
+    pipeline = RagPipeline(
+        embeddings, vectorstore, llm, top_k=settings.top_k, retriever=retriever
+    )
 
     return Services(
         settings=settings,

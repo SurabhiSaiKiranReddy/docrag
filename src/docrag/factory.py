@@ -17,6 +17,7 @@ from docrag.config import (
 )
 from docrag.embeddings.base import Embeddings
 from docrag.llm.base import LLM
+from docrag.rag.retriever import HybridRetriever, Retriever
 from docrag.vectorstore.base import VectorStore
 
 
@@ -69,3 +70,29 @@ def build_llm(settings: Settings | None = None) -> LLM:
             max_tokens=settings.max_tokens,
         )
     raise ValueError(f"Unsupported LLM provider: {settings.llm_provider}")
+
+
+def build_retriever(
+    embeddings: Embeddings,
+    vectorstore: VectorStore,
+    settings: Settings | None = None,
+) -> Retriever:
+    """Construct the configured retriever (dense, hybrid, and/or reranked)."""
+    settings = settings or get_settings()
+    if not settings.hybrid_search and not settings.rerank:
+        return Retriever(embeddings, vectorstore)
+
+    reranker = None
+    if settings.rerank:
+        from docrag.rag.rerank import CrossEncoderReranker
+
+        reranker = CrossEncoderReranker(settings.rerank_model)
+
+    return HybridRetriever(
+        embeddings,
+        vectorstore,
+        use_bm25=settings.hybrid_search,
+        reranker=reranker,
+        candidates=settings.hybrid_candidates,
+        rrf_k=settings.rrf_k,
+    )

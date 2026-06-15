@@ -73,6 +73,13 @@ class Settings(BaseSettings):
     # ── Retrieval ─────────────────────────────────────────────────────
     top_k: int = 5
 
+    # ── Hybrid search + reranking (Phase 7) ──────────────────────────
+    hybrid_search: bool = False  # fuse BM25 keyword ranking with vector search
+    rerank: bool = False  # cross-encoder rerank of fused candidates
+    rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    hybrid_candidates: int = 20  # candidate pool size before fuse/rerank
+    rrf_k: int = 60  # reciprocal-rank-fusion constant
+
     # ── Generation ────────────────────────────────────────────────────
     temperature: float = 0.1
     max_tokens: int = 1024

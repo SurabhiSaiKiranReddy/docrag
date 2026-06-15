@@ -17,9 +17,9 @@ install: ## Install CPU torch + project (editable) with dev tools
 	$(PIP) install torch --index-url https://download.pytorch.org/whl/cpu
 	$(PIP) install -e ".[dev]"
 
-install-all: ## Install everything (dev + eval + observability + hybrid)
+install-all: ## Install everything (dev + eval + observability)
 	$(PIP) install torch --index-url https://download.pytorch.org/whl/cpu
-	$(PIP) install -e ".[dev,eval,observability,hybrid]"
+	$(PIP) install -e ".[dev,eval,observability]"
 
 run: ## Run the FastAPI service at http://localhost:8000
 	$(PYTHON) -m uvicorn docrag.api.main:app --reload --host 0.0.0.0 --port 8000
