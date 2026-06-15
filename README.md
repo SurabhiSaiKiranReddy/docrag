@@ -15,7 +15,14 @@ DocRAG is **provider-agnostic** (`Embeddings`, `VectorStore`, and `LLM` are
 abstract interfaces) and **runs for free on a CPU** — no GPU and no API keys
 required for the default local stack.
 
-![DocRAG chat UI with citation-grounded answer](docs/demo.png)
+![DocRAG streaming a grounded, cited answer from the live /query endpoint](docs/demo.gif)
+
+> *Real output streamed from the live API (`llama3.2:3b` on CPU) — sources arrive
+> first, then the answer streams token-by-token with inline citations.*
+
+The Streamlit chat UI over the same backend:
+
+![DocRAG Streamlit chat UI with citation expander](docs/ui.png)
 
 ---
 
