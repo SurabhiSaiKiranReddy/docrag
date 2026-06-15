@@ -1,58 +1,213 @@
 # DocRAG — Document Intelligence Platform (RAG)
 
-A portfolio-grade, production-style **Retrieval-Augmented Generation** service.
-Upload documents (PDF / TXT / Markdown) and DocRAG **ingests → chunks → embeds →
-indexes** them, then answers natural-language questions with an LLM — every
-answer **grounded with citations** back to the source chunks.
+> A portfolio-grade, production-style **Retrieval-Augmented Generation** service.
+> Upload documents (PDF / TXT / Markdown) and DocRAG **ingests → chunks → embeds →
+> indexes** them, then answers natural-language questions with an LLM — every
+> answer **grounded with inline citations** back to the source chunks.
 
-Designed to run **for free on a CPU** (no GPU required): local embeddings
-(`sentence-transformers`) + FAISS + Ollama by default, with one-env-var swaps to
-OpenAI for speed.
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-async-009688.svg)](https://fastapi.tiangolo.com/)
+[![LangChain](https://img.shields.io/badge/LangChain-orchestration-1c3c3c.svg)](https://www.langchain.com/)
+[![FAISS](https://img.shields.io/badge/FAISS-vector%20search-0467df.svg)](https://github.com/facebookresearch/faiss)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> 🚧 **Status:** under active construction. See
-> [DocRAG-Project-Spec.md](DocRAG-Project-Spec.md) for the full spec and build
-> order.
+DocRAG is **provider-agnostic** (`Embeddings`, `VectorStore`, and `LLM` are
+abstract interfaces) and **runs for free on a CPU** — no GPU and no API keys
+required for the default local stack.
+
+---
+
+## Highlights
+
+- 🔌 **Swappable providers** via one env var — local *or* cloud, no code changes.
+- 📑 **Citation-grounded answers** — every claim cites `[source: file #chunk]`.
+- 🌊 **Token streaming** — answers stream over NDJSON to the API and UI.
+- 🧱 **Token-aware chunking** — `tiktoken` sliding window with page-accurate metadata.
+- 🧪 **Tested** — `pytest` suite with fully offline fakes; `ruff` + `mypy` clean.
+- 🖥️ **Runs on a laptop** — 32 GB RAM, **no GPU** needed (see below).
+
+---
+
+## Do I need a GPU?
+
+**No.** Everything except local LLM *generation* is comfortably CPU-bound:
+
+| Component | Hardware | Notes |
+|---|---|---|
+| Embeddings (`all-MiniLM-L6-v2`) | CPU | 384-dim, fast on a laptop |
+| Vector search (FAISS) | CPU | `faiss-cpu`, flat inner-product index |
+| Ingestion / API / chunking | CPU | no GPU relevance |
+| Local LLM generation (Ollama) | CPU (slow) / GPU (fast) | small quantized models give ~5–15 tok/s on CPU |
+
+If local generation feels slow, flip the LLM provider to **OpenAI `gpt-4o-mini`**
+(cheap, fast, no hardware) while keeping embeddings local and free.
+
+---
 
 ## Quickstart
 
 ```bash
-make venv       # create the virtual environment (.venv)
-make install    # CPU-only torch + project (editable) with dev tools
+make venv          # create the virtual environment (.venv)
+make install       # CPU-only torch + project (editable) with dev tools
 cp .env.example .env
-make run         # FastAPI at http://localhost:8000  (docs at /docs)
-make ui          # Streamlit UI at http://localhost:8501  (second terminal)
+make run           # FastAPI at http://localhost:8000  (interactive docs at /docs)
+make ui            # Streamlit UI at http://localhost:8501  (in a second terminal)
 ```
 
-The default configuration needs **no API keys**. To use OpenAI instead, set
-`DOCRAG_LLM_PROVIDER=openai` / `DOCRAG_EMBEDDINGS_PROVIDER=openai` and export
-`OPENAI_API_KEY` in your `.env`.
+The default config (`local` embeddings + `faiss` + `ollama`) needs **no API keys**.
+
+### Choosing an LLM backend
+
+**Option A — Local & free (Ollama).** Install Ollama and pull a small model:
+
+```bash
+# https://ollama.com/download  (works in WSL or on the Windows host)
+ollama pull llama3.2:3b
+ollama serve         # serves http://localhost:11434
+```
+
+> **WSL note:** run Ollama inside WSL, or point `DOCRAG_OLLAMA_BASE_URL` at the
+> Windows host if you run Ollama there.
+
+**Option B — Fast & cheap (OpenAI).** In `.env`:
+
+```ini
+DOCRAG_LLM_PROVIDER=openai
+DOCRAG_EMBEDDINGS_PROVIDER=openai   # optional; local embeddings stay free
+OPENAI_API_KEY=sk-...
+```
+
+---
 
 ## Architecture
 
-See [DocRAG-Project-Spec.md](DocRAG-Project-Spec.md) §5. A rendered diagram will
-live at `docs/architecture.png` in a later phase.
+```mermaid
+flowchart LR
+    U[User] -->|Upload docs| API[FastAPI Service]
+    U -->|Ask question| API
+    API -->|parse + chunk| ING[Ingestion Pipeline]
+    ING -->|embed| EMB[Embeddings Provider]
+    EMB --> VDB[(Vector Store<br/>FAISS)]
+    API -->|retrieve top-k| VDB
+    VDB -->|context chunks| RAG[RAG Orchestrator<br/>LangChain]
+    RAG -->|grounded prompt| LLM[LLM Provider<br/>OpenAI / Ollama]
+    LLM -->|streamed answer + citations| API
+    API --> U
+```
+
+**Ingestion:** detect type → extract text (per-page for PDF) → normalize →
+token-aware chunk → embed (batched) → upsert into the vector store with
+`source` / `chunk_id` / `page` metadata.
+
+**Query:** embed the question → top-k similarity search → assemble a grounded,
+citation-annotated prompt → stream the LLM answer with inline citations.
+
+---
+
+## API
+
+| Method | Path | Description |
+|---|---|---|
+| `GET`  | `/health` | Liveness, configured providers, indexed chunk count |
+| `POST` | `/ingest` | Multipart upload of a PDF/TXT/MD file to index |
+| `POST` | `/query`  | Ask a question; NDJSON token stream (or JSON when `stream=false`) |
+
+```bash
+# Ingest a document
+curl -X POST http://localhost:8000/ingest \
+  -F "file=@data/sample/nimbus-faq.md;type=text/markdown"
+
+# Ask a question (non-streaming JSON)
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"question":"How long are raw events retained?","stream":false}'
+```
+
+The streaming response emits one `sources` event (citations), then `token`
+events, then a final `done` event (or an `error` event if generation fails).
+
+---
+
+## Configuration
+
+All settings use the `DOCRAG_` prefix and can live in `.env` (see
+[.env.example](.env.example)).
+
+| Variable | Default | Description |
+|---|---|---|
+| `DOCRAG_EMBEDDINGS_PROVIDER` | `local` | `local` (sentence-transformers) or `openai` |
+| `DOCRAG_LLM_PROVIDER` | `ollama` | `ollama` (local) or `openai` |
+| `DOCRAG_VECTORSTORE_PROVIDER` | `faiss` | local FAISS index |
+| `DOCRAG_CHUNK_SIZE` / `DOCRAG_CHUNK_OVERLAP` | `600` / `80` | token-aware chunking |
+| `DOCRAG_TOP_K` | `5` | chunks retrieved per query |
+| `OPENAI_API_KEY` | — | required only when a provider is `openai` |
+
+---
 
 ## Design Principles
 
-- **Provider-agnostic interfaces** — `Embeddings`, `VectorStore`, and `LLM` are
-  abstract base classes; concrete backends are chosen via env vars.
-- **Runs free out-of-the-box** — FAISS + sentence-transformers + Ollama require
-  no API keys, so any reviewer can run it on a laptop.
-- **Measurable quality** — a RAG evaluation harness reports real retrieval and
-  answer metrics (added in a later phase).
-- **Secure by default** — secrets only via env; `.env` is gitignored; built and
-  tested exclusively on public/synthetic data.
+1. **Provider-agnostic interfaces** — `Embeddings`, `VectorStore`, and `LLM` are
+   ABCs; concrete backends are wired in a single composition root
+   ([factory.py](src/docrag/factory.py)). Dependency inversion, not vendor lock-in.
+2. **Runs free out-of-the-box** — FAISS + sentence-transformers + Ollama require
+   no API keys, so any reviewer can run it on a laptop.
+3. **Grounded & cited** — the prompt forbids outside knowledge and requires
+   inline citations; unsupported questions get an honest "I don't know".
+4. **Observable** — structured JSON logs today; latency/cost metrics on the roadmap.
+5. **Secure by default** — secrets only via env, `.env` is gitignored, and the
+   project is built and tested exclusively on public/synthetic data.
+
+---
 
 ## Project Layout
 
 ```
-src/docrag/        # application package (api, ingestion, embeddings,
-                   # vectorstore, rag, llm, observability)
-ui/                # Streamlit app
-scripts/           # load test + evaluation harness
-tests/             # pytest suite
-data/sample/       # synthetic documents for local testing
+src/docrag/
+├── config.py            # pydantic-settings; provider enums
+├── factory.py           # composition root: settings -> concrete providers
+├── models.py            # Chunk / ScoredChunk / Citation
+├── api/                 # FastAPI app, schemas, DI container
+├── ingestion/           # loaders (pdf/txt/md) + token-aware chunker + service
+├── embeddings/          # Embeddings ABC + local + openai
+├── vectorstore/         # VectorStore ABC + FAISS
+├── llm/                 # LLM ABC + ollama + openai
+├── rag/                 # retriever, grounded prompt, streaming pipeline
+└── observability/       # structured logging
+ui/app.py                # Streamlit chat UI
+data/sample/             # synthetic documents for local testing
+tests/                   # pytest suite (offline fakes)
 ```
+
+---
+
+## Development
+
+```bash
+make test    # pytest
+make lint    # ruff + mypy
+make fmt     # black + ruff --fix
+```
+
+---
+
+## Roadmap
+
+These build on the same interfaces without breaking the MVP:
+
+- [ ] **Hybrid search** — BM25 + vector fused with Reciprocal Rank Fusion
+- [ ] **Reranking** — cross-encoder reorder of retrieved candidates
+- [ ] **Evaluation harness** — RAGAS (faithfulness, answer relevancy, context precision/recall)
+- [ ] **Observability** — Prometheus metrics (p50/p95/p99, tokens, cost) + Grafana
+- [ ] **Docker + CI** — `docker-compose` stack and GitHub Actions (lint/type/test/build)
+- [ ] **More stores/providers** — pgvector, Pinecone, AWS Bedrock
+
+---
+
+## A note on data & honesty
+
+DocRAG is built on **public/synthetic data only** (see [data/sample](data/sample)).
+It mirrors the *architecture* of a production RAG system without any proprietary
+content. All evaluation numbers published here are real outputs from local runs.
 
 ## License
 
