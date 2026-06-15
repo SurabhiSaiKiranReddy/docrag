@@ -19,8 +19,10 @@ SYSTEM_PROMPT = (
     "Rules:\n"
     "- Use ONLY the information in the context. Do not rely on outside knowledge.\n"
     "- If the context does not contain the answer, say you don't know.\n"
-    "- After each claim, cite its source using the exact [source: file #chunk] "
-    "marker shown in the context.\n"
+    "- After each claim, cite its source by copying VERBATIM the exact "
+    "[source: ...] marker that appears directly above the supporting text.\n"
+    "- Never invent, renumber, or modify a citation marker. Only use markers that "
+    "appear in the context exactly as written.\n"
     "- Be concise and factual."
 )
 
